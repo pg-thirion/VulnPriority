@@ -16,4 +16,4 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
       - run: python -m unittest discover -v
-      - run: python -m compileall -q app.py scoring.py
+      - run: python -m compileall -q app.py scoring.py operations.py ops_api.py

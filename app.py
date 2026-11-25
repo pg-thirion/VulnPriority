@@ -3,6 +3,9 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 import json
 from scoring import rank, parse_csv
+from operations import Store
+from ops_api import handle
+import os
 
 MAX_BYTES = 2_000_000
 INDEX = Path(__file__).with_name("index.html")
@@ -24,6 +27,8 @@ class Handler(BaseHTTPRequestHandler):
         self.reply(status, json.dumps(obj, allow_nan=False).encode())
 
     def do_GET(self):
+        if handle(self, self.server.store, "GET"):
+            return
         if self.headers.get("Host") not in ("127.0.0.1:8000", "localhost:8000"):
             return self.json_reply(403, {"error": "Local host only"})
         if self.path == "/":
@@ -34,6 +39,8 @@ class Handler(BaseHTTPRequestHandler):
             self.json_reply(404, {"error": "Not found"})
 
     def do_POST(self):
+        if handle(self, self.server.store, "POST"):
+            return
         if self.headers.get("Host") not in ("127.0.0.1:8000", "localhost:8000") or self.headers.get("Origin") not in (None, "http://127.0.0.1:8000", "http://localhost:8000"):
             return self.json_reply(403, {"error": "Local origin only"})
         if self.path != "/api/rank":
@@ -57,6 +64,7 @@ class Handler(BaseHTTPRequestHandler):
 
 if __name__ == "__main__":
     with ThreadingHTTPServer(("127.0.0.1", 8000), Handler) as server:
+        server.store = Store(os.environ.get("VULNPRIORITY_DB", str(Path.home() / ".vulnpriority" / "inventory.sqlite3")))
         print("VulnPriority running at http://127.0.0.1:8000")
         try:
             server.serve_forever()
